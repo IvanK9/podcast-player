@@ -33,7 +33,9 @@ img {
   --text-muted: #86868b;
   --accent-color: #7224d8;
   --border-color: #e5e5ea;
-  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-stack:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
 }
 
 body {
@@ -83,7 +85,7 @@ body {
   border: 2px solid var(--text-muted);
   border-radius: 8px;
   background-color: var(--bg-main);
-  transition: border-color .3s ease-in-out;
+  transition: border-color 0.3s ease-in-out;
 }
 
 .podcast__search:focus-within {
@@ -99,7 +101,7 @@ body {
 .search__icon {
   display: flex;
   align-items: center;
-  flex-shrink: 0; 
+  flex-shrink: 0;
   opacity: 0.6;
 }
 
@@ -130,7 +132,7 @@ body {
   gap: 4px;
 }
 
-.podcast__nav-item  {
+.podcast__nav-item {
   display: flex;
   align-items: center;
   background: none;
@@ -143,7 +145,7 @@ body {
   color: var(--text-main);
   gap: 10px;
   text-align: left;
-  transition: background-color .3s ease-in-out;
+  transition: background-color 0.3s ease-in-out;
 }
 
 .podcast__nav-item:hover {
@@ -187,7 +189,7 @@ body {
   border: none;
   cursor: pointer;
   opacity: 0.5;
-  transition: opacity .3s ease-in-out
+  transition: opacity 0.3s ease-in-out;
 }
 
 .controls__btn:hover {
@@ -231,7 +233,7 @@ body {
   font-weight: 600;
 }
 
-.player__divider{
+.player__divider {
   margin: 0 4px;
   color: var(--text-muted);
 }
@@ -254,7 +256,7 @@ body {
   accent-color: var(--text-main);
   cursor: pointer;
   opacity: 0.5;
-  transition: opacity .3s ease-in-out;
+  transition: opacity 0.3s ease-in-out;
 }
 
 .timeline__progress-bar:hover {
@@ -275,7 +277,7 @@ body {
   accent-color: var(--text-main);
   opacity: 0.5;
   cursor: pointer;
-  transition: opacity .3s ease-in-out;
+  transition: opacity 0.3s ease-in-out;
 }
 
 .volume__bar:hover {
