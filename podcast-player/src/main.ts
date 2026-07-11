@@ -1,6 +1,11 @@
 import { fetchFromListenNotes } from "./api";
 import type { Episode, Podcast, PodcastDetails } from "./types";
 import { formatTime, syncTrackDataWithPlayer } from "./playerService";
+import {
+  initFavorites,
+  isEpisodeFavorite,
+  toggleFavorite,
+} from "./favoritesService";
 
 const searchInput = document.querySelector("#search");
 const searchTitle = document.querySelector<HTMLHeadingElement>(
@@ -183,12 +188,37 @@ function handlePodcastClick(event: Event): void {
   }
 
   const episode = event.target.closest(".episode-row");
+  const favBtn = event.target.closest(".episode-row__fav-btn");
+
+  if (favBtn && favBtn instanceof HTMLButtonElement) {
+    event.stopPropagation();
+
+    const episodeRow = favBtn.closest(".episode-row");
+
+    if (episodeRow && episodeRow instanceof HTMLElement) {
+      const episodeId = episodeRow.getAttribute("data-episode-id") ?? "";
+
+      if (episodeId) {
+        const isNowFavorite = toggleFavorite(episodeId);
+
+        if (isNowFavorite) {
+          favBtn.textContent = "♥";
+          favBtn.classList.add("episode-row__fav-btn--active");
+        } else {
+          favBtn.textContent = "♡";
+          favBtn.classList.remove("episode-row__fav-btn--active");
+        }
+      }
+    }
+    return;
+  }
+
   if (episode && episode instanceof HTMLElement) {
     const audioUrl = episode.getAttribute("data-audio-url") ?? "";
     const titleText =
       episode.querySelector(".episode-row__title")?.textContent ??
       "Без названия";
-    const author = document.querySelector('.podcast-details__author');
+    const author = document.querySelector(".podcast-details__author");
 
     let publisherText = author?.textContent ?? "Неизвестный автор";
 
@@ -294,6 +324,7 @@ function createEpisode(episode: Episode): HTMLElement {
   const row = document.createElement("div");
   row.classList.add("episode-row");
   row.setAttribute("data-audio-url", episode.audio);
+  row.setAttribute("data-episode-id", episode.id);
 
   const playBtn = document.createElement("button");
   playBtn.classList.add("episode-row__play-btn");
@@ -314,11 +345,22 @@ function createEpisode(episode: Episode): HTMLElement {
   duration.classList.add("episode-row__duration");
   duration.textContent = `⏱ ${formatTime(episode.audio_length_sec)}`;
 
+  const favBtn = document.createElement("button");
+  favBtn.classList.add("episode-row__fav-btn");
+
+  if (isEpisodeFavorite(episode.id)) {
+    favBtn.textContent = "♥";
+    favBtn.classList.add("episode-row__fav-btn--active");
+  } else {
+    favBtn.textContent = "♡";
+  }
+
   info.appendChild(date);
   info.appendChild(title);
   info.appendChild(duration);
   row.appendChild(playBtn);
   row.appendChild(info);
+  row.appendChild(favBtn);
 
   return row;
 }
@@ -346,6 +388,7 @@ if (contentPodcasts) {
 }
 
 async function initApp() {
+  initFavorites();
   loadDefaultPodcast();
 }
 
