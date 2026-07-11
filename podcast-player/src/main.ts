@@ -1,6 +1,6 @@
 import { fetchFromListenNotes } from "./api";
 import type { Episode, Podcast, PodcastDetails } from "./types";
-import { syncTrackDataWithPlayer } from "./playerService";
+import { formatTime, syncTrackDataWithPlayer } from "./playerService";
 
 const searchInput = document.querySelector("#search");
 const searchTitle = document.querySelector<HTMLHeadingElement>(
@@ -177,7 +177,6 @@ function handlePodcastClick(event: Event): void {
   if (cardElement && cardElement instanceof HTMLElement) {
     const podcastId = cardElement.getAttribute("data-id");
     if (podcastId) {
-      console.log(`[Клик] Переход к подкасту ID: ${podcastId}`);
       loadPodcastDetails(podcastId);
     }
     return;
@@ -190,7 +189,7 @@ function handlePodcastClick(event: Event): void {
       episode.querySelector(".episode-row__title")?.textContent ??
       "Без названия";
     const author = document.querySelector('.podcast-details__author');
-    console.log(author);
+
     let publisherText = author?.textContent ?? "Неизвестный автор";
 
     syncTrackDataWithPlayer({
@@ -237,7 +236,7 @@ function renderPodcastPage(podcast: PodcastDetails) {
 
   const backBtn = document.createElement("button");
   backBtn.classList.add("podcast-details__btn-back");
-  backBtn.textContent = "Назад к списку";
+  backBtn.textContent = "Back to list";
   backBtn.addEventListener("click", () => {
     loadDefaultPodcast();
   });
@@ -313,8 +312,7 @@ function createEpisode(episode: Episode): HTMLElement {
 
   const duration = document.createElement("span");
   duration.classList.add("episode-row__duration");
-  const minutes = Math.floor(episode.audio_length_sec / 60);
-  duration.textContent = `⏱ ${minutes} мин`;
+  duration.textContent = `⏱ ${formatTime(episode.audio_length_sec)}`;
 
   info.appendChild(date);
   info.appendChild(title);
@@ -348,7 +346,6 @@ if (contentPodcasts) {
 }
 
 async function initApp() {
-  console.log("--- Старт приложения Podcast Player (Safe DOM Mode) ---");
   loadDefaultPodcast();
 }
 
