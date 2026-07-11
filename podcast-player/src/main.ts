@@ -1,14 +1,24 @@
 import { fetchFromListenNotes } from "./api";
 import type { Podcast } from "./types";
 
-function renderPodcasts(podcasts: Podcast[]) {
-  const contentPodcasts = document.querySelector(".content__podcasts");
+const searchInput = document.querySelector("#search");
+const searchTitle = document.querySelector<HTMLHeadingElement>(
+  ".content__search-result-title",
+);
 
+const contentPodcasts: HTMLElement | null =
+  document.querySelector(".content__podcasts");
+
+function removeContent(wrapper: HTMLElement) {
+  while (wrapper.firstChild) {
+    wrapper.removeChild(wrapper.firstChild);
+  }
+}
+
+function renderPodcasts(podcasts: Podcast[]) {
   if (!contentPodcasts) return;
 
-  while (contentPodcasts.firstChild) {
-    contentPodcasts.removeChild(contentPodcasts.firstChild);
-  }
+  removeContent(contentPodcasts);
 
   if (!podcasts || podcasts.length === 0) {
     const emptyMessage = document.createElement("p");
@@ -30,7 +40,7 @@ function renderPodcasts(podcasts: Podcast[]) {
 
 function createPodcastCard(podcast: Podcast): HTMLElement {
   const card = document.createElement("article");
-  card.classList.add("podcasts__card","card");
+  card.classList.add("podcasts__card", "card");
   card.setAttribute("data-id", podcast.id);
 
   const imgWrapper = document.createElement("div");
@@ -64,9 +74,23 @@ function createPodcastCard(podcast: Podcast): HTMLElement {
   return card;
 }
 
-async function initApp() {
-  console.log("--- Старт приложения Podcast Player (Safe DOM Mode) ---");
-  const container = document.querySelector(".content__podcasts");
+function debounce<T extends (...args: any[]) => void>(fn: T, delay = 500) {
+  let timerId: ReturnType<typeof setTimeout> | undefined;
+
+  return function (this: any, ...args: Parameters<T>) {
+    if (timerId) {
+      clearTimeout(timerId);
+    }
+
+    timerId = setTimeout(() => {
+      fn.apply(this, args);
+    }, delay);
+  };
+}
+
+async function loadDefaultPodcast(): Promise<void> {
+  if (searchTitle) searchTitle.style.display = "none";
+  toggleLoader(true);
 
   try {
     const data = await fetchFromListenNotes({
@@ -76,18 +100,85 @@ async function initApp() {
         page: "1",
       },
     });
-
-    console.log("Данные успешно получены с сервера:", data);
     renderPodcasts(data.podcasts);
   } catch (error) {
-    if (container) {
-      container.textContent = "";
-      const errorMessage = document.createElement("p");
-      errorMessage.classList.add("podcasts-error");
-      errorMessage.textContent = "Не удалось загрузить подкасты. Проверьте сеть.";
-      container.appendChild(errorMessage);
+    console.error("Ошибка загрузки дефолтных подкастов", error);
+  } finally {
+    toggleLoader(false);
+  }
+}
+
+async function performSearch(query: string): Promise<void> {
+  toggleLoader(true);
+
+  try {
+    const data = await fetchFromListenNotes({
+      endpoint: "search",
+      params: {
+        q: query,
+        type: "podcast",
+      },
+    });
+
+    renderPodcasts(data.results);
+    if (searchTitle) {
+      searchTitle.textContent = `Результаты поиска по запросу: "${query}"`;
+      searchTitle.style.display = "block";
+    }
+  } catch (error) {
+    console.error("Ошибка при выполнении поиска", error);
+  } finally {
+    toggleLoader(false);
+  }
+}
+
+function toggleLoader(isLoading: boolean): void {
+  if (!contentPodcasts) return;
+
+  if (isLoading) {
+    removeContent(contentPodcasts);
+    const spinnerElement = createSpinner();
+    contentPodcasts.appendChild(spinnerElement);
+  } else {
+    const spinnerWrapper = contentPodcasts.querySelector(".spinner__wrapper");
+    if (spinnerWrapper) {
+      contentPodcasts.removeChild(spinnerWrapper);
     }
   }
+}
+
+const handleSearchInputWithDebounce = debounce((query: string) => {
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery === "") {
+    loadDefaultPodcast();
+  } else {
+    performSearch(trimmedQuery);
+  }
+}, 500);
+
+function createSpinner(): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.classList.add("spinner__wrapper");
+
+  const spinner = document.createElement("div");
+  spinner.classList.add("spinner__main");
+
+  wrapper.appendChild(spinner);
+  return wrapper;
+}
+
+if (searchInput) {
+  searchInput.addEventListener("input", (event: Event) => {
+    if (event.target instanceof HTMLInputElement) {
+      handleSearchInputWithDebounce(event.target.value);
+    }
+  });
+}
+
+async function initApp() {
+  console.log("--- Старт приложения Podcast Player (Safe DOM Mode) ---");
+  loadDefaultPodcast();
 }
 
 initApp();

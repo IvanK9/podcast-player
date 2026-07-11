@@ -14,3 +14,9 @@ export interface BestPodcastsResponse {
   has_next: boolean;
   has_previous: boolean;
 }
+
+export interface SearchResponse {
+  results: Podcast[];
+  total: number;
+  count: number;
+}
