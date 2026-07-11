@@ -515,6 +515,15 @@ body {
   min-width: 0;
 }
 
+.episode-row__date {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
 .episode-row__title {
   margin: 0;
   font-size: 15px;

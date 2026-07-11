@@ -196,7 +196,6 @@ async function loadPodcastDetails(id: string): Promise<void> {
     });
     renderPodcastPage(data);
     toggleLoader(false);
-
   } catch (error) {
     console.error(`Не удалось загрузить детали подкаста с ID ${id}:`, error);
     toggleLoader(false);
@@ -257,7 +256,7 @@ function renderPodcastPage(podcast: PodcastDetails) {
   episodesContainer.classList.add("podcast-details__episodes");
 
   const episodesTitle = document.createElement("h3");
-  episodesTitle.classList.add('podcast-details__episodes-title');
+  episodesTitle.classList.add("podcast-details__episodes-title");
   episodesTitle.textContent = `Эпизоды (Всего - ${podcast.total_episodes})`;
   episodesContainer.appendChild(episodesTitle);
 
@@ -285,6 +284,10 @@ function createEpisode(episode: Episode): HTMLElement {
   const info = document.createElement("div");
   info.classList.add("episode-row__info");
 
+  const date = document.createElement("span");
+  date.classList.add("episode-row__date");
+  date.textContent = formatDate(episode.pub_date_ms);
+
   const title = document.createElement("h4");
   title.classList.add("episode-row__title");
   title.textContent = episode.title ?? "Без названия";
@@ -294,12 +297,23 @@ function createEpisode(episode: Episode): HTMLElement {
   const minutes = Math.floor(episode.audio_length_sec / 60);
   duration.textContent = `⏱ ${minutes} мин`;
 
+   info.appendChild(date);
   info.appendChild(title);
   info.appendChild(duration);
   row.appendChild(playBtn);
   row.appendChild(info);
 
   return row;
+}
+
+function formatDate(ms: number): string {
+  const options: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  };
+
+  return new Intl.DateTimeFormat("ru-RU", options).format(new Date(ms));
 }
 
 if (searchInput) {
