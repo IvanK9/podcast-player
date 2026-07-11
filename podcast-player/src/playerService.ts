@@ -18,6 +18,12 @@ const progressBar = document.querySelector<HTMLInputElement>(
   ".timeline__progress-bar",
 );
 const volumeBar = document.querySelector<HTMLInputElement>(".volume__bar");
+const prevBtn = document.querySelector<HTMLButtonElement>(
+  ".controls__btn--prev",
+);
+const nextBtn = document.querySelector<HTMLButtonElement>(
+  ".controls__btn--next",
+);
 
 interface SimpleEpisodeData {
   title: string;
@@ -143,5 +149,25 @@ if (volumeBar) {
     const newVolume = parseFloat(this.value) / 100;
 
     audio.volume = newVolume;
+  });
+}
+
+if (prevBtn) {
+  prevBtn.addEventListener("click", () => {
+    if (!audio.src) return;
+
+    const newTime = Math.max(0, audio.currentTime - 15);
+
+    audio.currentTime = newTime;
+  });
+}
+
+if (nextBtn) {
+  nextBtn.addEventListener("click", () => {
+    if (!audio.src) return;
+
+    const newTime = Math.max(0, audio.currentTime + 30);
+
+    audio.currentTime = newTime;
   });
 }
