@@ -1,5 +1,5 @@
 import { fetchFromListenNotes } from "./api";
-import type { Podcast } from "./types";
+import type { Episode, Podcast, PodcastDetails } from "./types";
 
 const searchInput = document.querySelector("#search");
 const searchTitle = document.querySelector<HTMLHeadingElement>(
@@ -175,8 +175,7 @@ function handlePodcastClick(event: Event): void {
 
   if (!cardElement || !(cardElement instanceof HTMLElement)) return;
 
-  // const podcastId = cardElement.getAttribute("data-id");
-  const podcastId = "4d3fe717742d4963a85562e9f84d8c7d";
+  const podcastId = cardElement.getAttribute("data-id");
   if (podcastId) {
     console.log(`Кликнули по подкасту с ID: ${podcastId}`);
     loadPodcastDetails(podcastId);
@@ -195,13 +194,9 @@ async function loadPodcastDetails(id: string): Promise<void> {
         next_episode_pub_date: "0",
       },
     });
-    console.log("Данные деталей подкаста успешно получены:", data);
+    renderPodcastPage(data);
     toggleLoader(false);
 
-    contentPodcasts.textContent = "";
-    const tempMessage = document.createElement("h2");
-    tempMessage.textContent = `Страница подкаста с ID: ${id} в процессе разработки...`;
-    contentPodcasts.appendChild(tempMessage);
   } catch (error) {
     console.error(`Не удалось загрузить детали подкаста с ID ${id}:`, error);
     toggleLoader(false);
@@ -213,6 +208,98 @@ async function loadPodcastDetails(id: string): Promise<void> {
       "Не удалось загрузить информацию о подкасте. Попробуйте позже.";
     contentPodcasts.appendChild(errorMessage);
   }
+}
+
+function renderPodcastPage(podcast: PodcastDetails) {
+  if (!contentPodcasts) return;
+
+  removeContent(contentPodcasts);
+
+  const pageWrapper = document.createDocumentFragment();
+
+  const backBtn = document.createElement("button");
+  backBtn.classList.add("podcast-details__btn-back");
+  backBtn.textContent = "Назад к списку";
+  backBtn.addEventListener("click", () => {
+    loadDefaultPodcast();
+  });
+
+  const header = document.createElement("header");
+  header.classList.add("podcast-details__header");
+
+  const img = document.createElement("img");
+  img.classList.add("podcast-details__cover");
+  img.src = podcast.image ?? "https://placehold.co";
+  img.alt = podcast.title;
+
+  const textInfo = document.createElement("div");
+  textInfo.classList.add("podcast-details__text");
+
+  const title = document.createElement("h2");
+  title.classList.add("podcast-details__title");
+  title.textContent = podcast.title;
+
+  const author = document.createElement("p");
+  author.classList.add("podcast-details__author");
+  author.textContent = `Автор: ${podcast.publisher}`;
+
+  const desc = document.createElement("p");
+  desc.classList.add("podcast-details__description");
+  desc.textContent = podcast.description || "Описание отсутствует.";
+
+  textInfo.appendChild(title);
+  textInfo.appendChild(author);
+  textInfo.appendChild(desc);
+  header.appendChild(img);
+  header.appendChild(textInfo);
+
+  const episodesContainer = document.createElement("section");
+  episodesContainer.classList.add("podcast-details__episodes");
+
+  const episodesTitle = document.createElement("h3");
+  episodesTitle.classList.add('podcast-details__episodes-title');
+  episodesTitle.textContent = `Эпизоды (Всего - ${podcast.total_episodes})`;
+  episodesContainer.appendChild(episodesTitle);
+
+  podcast.episodes.forEach((episode) => {
+    const episodeRow = createEpisode(episode);
+    episodesContainer.appendChild(episodeRow);
+  });
+
+  pageWrapper.appendChild(backBtn);
+  pageWrapper.appendChild(header);
+  pageWrapper.appendChild(episodesContainer);
+
+  contentPodcasts.appendChild(pageWrapper);
+}
+
+function createEpisode(episode: Episode): HTMLElement {
+  const row = document.createElement("div");
+  row.classList.add("episode-row");
+  row.setAttribute("data-audio-url", episode.audio);
+
+  const playBtn = document.createElement("button");
+  playBtn.classList.add("episode-row__play-btn");
+  playBtn.textContent = "▶";
+
+  const info = document.createElement("div");
+  info.classList.add("episode-row__info");
+
+  const title = document.createElement("h4");
+  title.classList.add("episode-row__title");
+  title.textContent = episode.title ?? "Без названия";
+
+  const duration = document.createElement("span");
+  duration.classList.add("episode-row__duration");
+  const minutes = Math.floor(episode.audio_length_sec / 60);
+  duration.textContent = `⏱ ${minutes} мин`;
+
+  info.appendChild(title);
+  info.appendChild(duration);
+  row.appendChild(playBtn);
+  row.appendChild(info);
+
+  return row;
 }
 
 if (searchInput) {

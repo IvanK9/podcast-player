@@ -20,3 +20,24 @@ export interface SearchResponse {
   total: number;
   count: number;
 }
+
+export interface PodcastDetails {
+  id: string;
+  title: string;
+  publisher: string;
+  image: string;
+  thumbnail: string;
+  description: string;
+  total_episodes: number;
+  episodes: Episode[];
+}
+
+export interface Episode {
+  id: string;
+  title: string;
+  description: string;
+  audio: string;
+  audio_length_sec: number;
+  pub_date_ms: number;
+  image: string;
+}
