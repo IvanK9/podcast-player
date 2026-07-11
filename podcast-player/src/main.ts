@@ -1,5 +1,6 @@
 import { fetchFromListenNotes } from "./api";
 import type { Episode, Podcast, PodcastDetails } from "./types";
+import { syncTrackDataWithPlayer } from "./playerService";
 
 const searchInput = document.querySelector("#search");
 const searchTitle = document.querySelector<HTMLHeadingElement>(
@@ -173,12 +174,30 @@ function handlePodcastClick(event: Event): void {
 
   const cardElement = event.target.closest(".card");
 
-  if (!cardElement || !(cardElement instanceof HTMLElement)) return;
+  if (cardElement && cardElement instanceof HTMLElement) {
+    const podcastId = cardElement.getAttribute("data-id");
+    if (podcastId) {
+      console.log(`[Клик] Переход к подкасту ID: ${podcastId}`);
+      loadPodcastDetails(podcastId);
+    }
+    return;
+  }
 
-  const podcastId = cardElement.getAttribute("data-id");
-  if (podcastId) {
-    console.log(`Кликнули по подкасту с ID: ${podcastId}`);
-    loadPodcastDetails(podcastId);
+  const episode = event.target.closest(".episode-row");
+  if (episode && episode instanceof HTMLElement) {
+    const audioUrl = episode.getAttribute("data-audio-url") ?? "";
+    const titleText =
+      episode.querySelector(".episode-row__title")?.textContent ??
+      "Без названия";
+    const author = document.querySelector('.podcast-details__author');
+    console.log(author);
+    let publisherText = author?.textContent ?? "Неизвестный автор";
+
+    syncTrackDataWithPlayer({
+      title: titleText,
+      publisher: publisherText,
+      audioUrl: audioUrl,
+    });
   }
 }
 
@@ -240,7 +259,7 @@ function renderPodcastPage(podcast: PodcastDetails) {
 
   const author = document.createElement("p");
   author.classList.add("podcast-details__author");
-  author.textContent = `Автор: ${podcast.publisher}`;
+  author.textContent = `${podcast.publisher}`;
 
   const desc = document.createElement("p");
   desc.classList.add("podcast-details__description");
@@ -297,7 +316,7 @@ function createEpisode(episode: Episode): HTMLElement {
   const minutes = Math.floor(episode.audio_length_sec / 60);
   duration.textContent = `⏱ ${minutes} мин`;
 
-   info.appendChild(date);
+  info.appendChild(date);
   info.appendChild(title);
   info.appendChild(duration);
   row.appendChild(playBtn);
