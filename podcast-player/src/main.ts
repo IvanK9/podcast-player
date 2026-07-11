@@ -168,12 +168,63 @@ function createSpinner(): HTMLElement {
   return wrapper;
 }
 
+function handlePodcastClick(event: Event): void {
+  if (!(event.target instanceof HTMLElement)) return;
+
+  const cardElement = event.target.closest(".card");
+
+  if (!cardElement || !(cardElement instanceof HTMLElement)) return;
+
+  // const podcastId = cardElement.getAttribute("data-id");
+  const podcastId = "4d3fe717742d4963a85562e9f84d8c7d";
+  if (podcastId) {
+    console.log(`Кликнули по подкасту с ID: ${podcastId}`);
+    loadPodcastDetails(podcastId);
+  }
+}
+
+async function loadPodcastDetails(id: string): Promise<void> {
+  if (!contentPodcasts) return;
+
+  toggleLoader(true);
+
+  try {
+    const data = await fetchFromListenNotes({
+      endpoint: `podcasts/${id}`,
+      params: {
+        next_episode_pub_date: "0",
+      },
+    });
+    console.log("Данные деталей подкаста успешно получены:", data);
+    toggleLoader(false);
+
+    contentPodcasts.textContent = "";
+    const tempMessage = document.createElement("h2");
+    tempMessage.textContent = `Страница подкаста с ID: ${id} в процессе разработки...`;
+    contentPodcasts.appendChild(tempMessage);
+  } catch (error) {
+    console.error(`Не удалось загрузить детали подкаста с ID ${id}:`, error);
+    toggleLoader(false);
+
+    contentPodcasts.textContent = "";
+    const errorMessage = document.createElement("p");
+    errorMessage.classList.add("podcasts-error");
+    errorMessage.textContent =
+      "Не удалось загрузить информацию о подкасте. Попробуйте позже.";
+    contentPodcasts.appendChild(errorMessage);
+  }
+}
+
 if (searchInput) {
   searchInput.addEventListener("input", (event: Event) => {
     if (event.target instanceof HTMLInputElement) {
       handleSearchInputWithDebounce(event.target.value);
     }
   });
+}
+
+if (contentPodcasts) {
+  contentPodcasts.addEventListener("click", handlePodcastClick);
 }
 
 async function initApp() {
