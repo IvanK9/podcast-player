@@ -25,6 +25,12 @@ const nextBtn = document.querySelector<HTMLButtonElement>(
   ".controls__btn--next",
 );
 
+const controlsButtons = [
+  document.querySelector<HTMLButtonElement>(".controls__btn--prev"),
+  document.querySelector<HTMLButtonElement>(".controls__btn--play"),
+  document.querySelector<HTMLButtonElement>(".controls__btn--next"),
+];
+
 interface SimpleEpisodeData {
   title: string;
   publisher: string;
@@ -32,6 +38,7 @@ interface SimpleEpisodeData {
 }
 
 export function syncTrackDataWithPlayer(data: SimpleEpisodeData): void {
+  disabledPlayer(true);
   if (trackTitle) trackTitle.textContent = data.title;
   if (trackArtist) trackArtist.textContent = data.publisher;
 
@@ -171,3 +178,16 @@ if (nextBtn) {
     audio.currentTime = newTime;
   });
 }
+
+export function disabledPlayer(isEnabled: boolean): void {
+  controlsButtons.forEach((btn) => {
+    if (btn) {
+      btn.disabled = !isEnabled;
+    }
+  });
+
+  if (progressBar) progressBar.disabled = !isEnabled;
+  if (volumeBar) volumeBar.disabled = !isEnabled;
+}
+
+disabledPlayer(false);

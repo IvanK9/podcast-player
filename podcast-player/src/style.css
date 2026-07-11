@@ -541,3 +541,10 @@ body {
   font-weight: 500;
   color: var(--text-muted);
 }
+
+.controls__btn:disabled,
+.timeline__progress-bar:disabled,
+.volume__bar:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
