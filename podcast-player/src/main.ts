@@ -5,6 +5,7 @@ import {
   initFavorites,
   isEpisodeFavorite,
   toggleFavorite,
+  getFavoritesList,
 } from "./favoritesService";
 
 const searchInput = document.querySelector("#search");
@@ -14,6 +15,13 @@ const searchTitle = document.querySelector<HTMLHeadingElement>(
 
 const contentPodcasts: HTMLElement | null =
   document.querySelector(".content__podcasts");
+
+const homeBtn = document.querySelector<HTMLButtonElement>(
+  ".podcast__nav-item--home",
+);
+const savedBtn = document.querySelector<HTMLButtonElement>(
+  ".podcast__nav-item--saved",
+);
 
 function removeContent(wrapper: HTMLElement) {
   while (wrapper.firstChild) {
@@ -365,6 +373,70 @@ function createEpisode(episode: Episode): HTMLElement {
   return row;
 }
 
+async function renderSavedPage(): Promise<void> {
+  if (!contentPodcasts) return;
+
+  // if (searchTitle) searchTitle.style.display = "none";
+  toggleLoader(true);
+
+  const savedIds = getFavoritesList();
+
+  if (savedIds.length === 0) {
+    toggleLoader(false);
+    contentPodcasts.textContent = "";
+
+    const emptyMsg = document.createElement("p");
+    emptyMsg.classList.add("podcasts__empty");
+    emptyMsg.textContent = "У вас пока нет сохраненных подкастов.";
+
+    contentPodcasts.appendChild(emptyMsg);
+    return;
+  }
+
+  try {
+    const requests = savedIds.map((id) =>
+      fetchFromListenNotes({
+        endpoint: `podcasts/${id}`,
+        params: { next_episode_pub_date: "0" },
+      }),
+    );
+
+    const podcastsData = await Promise.all(requests);
+    toggleLoader(false);
+    contentPodcasts.textContent = "";
+
+    const library = document.createElement("div");
+    library.classList.add("content__podcasts");
+
+    const fragment = document.createDocumentFragment();
+    podcastsData.forEach((data) => {
+      if (data) {
+        const cardElement = createPodcastCard(data);
+        fragment.appendChild(cardElement);
+      }
+    });
+  } catch (error) {
+    console.error("Ошибка загрузки:", error);
+    toggleLoader(false);
+    contentPodcasts.textContent = "";
+
+    const errorMsg = document.createElement("p");
+    errorMsg.classList.add("podcasts-error");
+    errorMsg.textContent = "Не удалось загрузить вашу библиотеку.";
+    contentPodcasts.appendChild(errorMsg);
+  }
+}
+
+function highlightActiveTab(activeButton: HTMLButtonElement): void {
+  const allSidebarBtns = document.querySelectorAll(".podcast__nav-item");
+
+  allSidebarBtns.forEach((btn) => {
+    btn.classList.remove("podcast__nav-item--active");
+  });
+
+  activeButton.classList.add("podcast__nav-item--active");
+}
+
 function formatDate(ms: number): string {
   const options: Intl.DateTimeFormatOptions = {
     day: "numeric",
@@ -385,6 +457,22 @@ if (searchInput) {
 
 if (contentPodcasts) {
   contentPodcasts.addEventListener("click", handlePodcastClick);
+}
+
+if (homeBtn) {
+  homeBtn.addEventListener("click", function (this: HTMLButtonElement) {
+    highlightActiveTab(this);
+
+    loadDefaultPodcast();
+  });
+}
+
+if (savedBtn) {
+  savedBtn.addEventListener("click", function (this: HTMLButtonElement) {
+    highlightActiveTab(this);
+
+    renderSavedPage();
+  });
 }
 
 async function initApp() {

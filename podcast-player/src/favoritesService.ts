@@ -33,3 +33,7 @@ export function toggleFavorite(episodeId: string): boolean {
 
   return isAdded;
 }
+
+export function getFavoritesList(): string[] {
+  return [...favoritesList];
+}
