@@ -17,6 +17,7 @@ const totalTimeLabel =
 const progressBar = document.querySelector<HTMLInputElement>(
   ".timeline__progress-bar",
 );
+const volumeBar = document.querySelector<HTMLInputElement>(".volume__bar");
 
 interface SimpleEpisodeData {
   title: string;
@@ -130,5 +131,17 @@ if (progressBar) {
 
     const newTime = (parseFloat(this.value) / 100) * duration;
     audio.currentTime = newTime;
+  });
+}
+
+if (volumeBar) {
+  const defaultVolume = parseFloat(volumeBar.value) / 100;
+
+  audio.volume = defaultVolume;
+
+  volumeBar.addEventListener("input", function (this: HTMLInputElement) {
+    const newVolume = parseFloat(this.value) / 100;
+
+    audio.volume = newVolume;
   });
 }
