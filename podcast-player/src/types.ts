@@ -40,4 +40,9 @@ export interface Episode {
   audio_length_sec: number;
   pub_date_ms: number;
   image: string;
+  publisher?: string;
+}
+
+export interface PlaybackProgress {
+  [episodeId: string]: number;
 }

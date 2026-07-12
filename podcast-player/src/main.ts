@@ -6,6 +6,7 @@ import {
   isEpisodeFavorite,
   toggleFavorite,
   getFavoritesList,
+  getResumePosition,
 } from "./favoritesService";
 
 const searchInput = document.querySelector("#search");
@@ -59,7 +60,7 @@ function createPodcastCard(podcast: Podcast): HTMLElement {
 
   const imgWrapper = document.createElement("div");
   imgWrapper.classList.add("card__image-wrapper");
-  const DEFAULT_PLACEHOLDER = "https://placehold.co";
+  const DEFAULT_PLACEHOLDER = "https://placehold.co/400";
 
   const img = document.createElement("img");
   img.classList.add("card__img");
@@ -198,23 +199,52 @@ function handlePodcastClick(event: Event): void {
   const episode = event.target.closest(".episode-row");
   const favBtn = event.target.closest(".episode-row__fav-btn");
 
-  if (favBtn && favBtn instanceof HTMLButtonElement) {
+  const getEpisode = (episode: HTMLElement): Episode => {
+    const titleEl = episode.querySelector(".episode-row__title");
+
+    const parsedDate = Number(episode.getAttribute("data-pub-date"));
+    const safeDate = isNaN(parsedDate) ? 0 : parsedDate;
+
+    const parsedDuration = Number(episode.getAttribute("data-duration"));
+    const safeDuration = isNaN(parsedDuration) ? 0 : parsedDuration;
+
+    return {
+      id: episode.getAttribute("data-episode-id") ?? "",
+      audio: episode.getAttribute("data-audio-url") ?? "",
+      title: titleEl ? (titleEl.textContent ?? "Без названия") : "Без названия",
+      audio_length_sec: safeDuration,
+      pub_date_ms: safeDate,
+      image: episode.getAttribute("data-image") ?? "",
+      description: "",
+      publisher: episode.getAttribute("data-publisher") ?? "Неизвестный автор",
+    };
+  };
+
+  if (favBtn instanceof HTMLButtonElement && episode instanceof HTMLElement) {
     event.stopPropagation();
 
-    const episodeRow = favBtn.closest(".episode-row");
+    const episodeData = getEpisode(episode);
 
-    if (episodeRow && episodeRow instanceof HTMLElement) {
-      const episodeId = episodeRow.getAttribute("data-episode-id") ?? "";
+    if (episodeData.id) {
+      const isNowFavorite = toggleFavorite(episodeData);
 
-      if (episodeId) {
-        const isNowFavorite = toggleFavorite(episodeId);
+      if (isNowFavorite) {
+        favBtn.textContent = "♥";
+        favBtn.classList.add("episode-row__fav-btn--active");
+      } else {
+        favBtn.textContent = "♡";
+        favBtn.classList.remove("episode-row__fav-btn--active");
 
-        if (isNowFavorite) {
-          favBtn.textContent = "♥";
-          favBtn.classList.add("episode-row__fav-btn--active");
-        } else {
-          favBtn.textContent = "♡";
-          favBtn.classList.remove("episode-row__fav-btn--active");
+        const isPlaylistPage = document.querySelector(".saved-playlist-marker");
+
+        if (isPlaylistPage) {
+          episode.remove();
+          const remainingRows = contentPodcasts
+            ? contentPodcasts.querySelectorAll(".episode-row")
+            : [];
+          if (remainingRows.length === 0) {
+            renderSavedPage();
+          }
         }
       }
     }
@@ -222,19 +252,19 @@ function handlePodcastClick(event: Event): void {
   }
 
   if (episode && episode instanceof HTMLElement) {
-    const audioUrl = episode.getAttribute("data-audio-url") ?? "";
-    const titleText =
-      episode.querySelector(".episode-row__title")?.textContent ??
-      "Без названия";
-    const author = document.querySelector(".podcast-details__author");
+    const episodeData = getEpisode(episode);
 
-    let publisherText = author?.textContent ?? "Неизвестный автор";
+    if (episodeData.audio && episodeData.id) {
+      const startTime = getResumePosition(episodeData.id);
 
-    syncTrackDataWithPlayer({
-      title: titleText,
-      publisher: publisherText,
-      audioUrl: audioUrl,
-    });
+      syncTrackDataWithPlayer({
+        id: episodeData.id,
+        title: episodeData.title,
+        publisher: episodeData.publisher ?? "Неизвестный автор",
+        audioUrl: episodeData.audio,
+        startTime: startTime,
+      });
+    }
   }
 }
 
@@ -274,7 +304,7 @@ function renderPodcastPage(podcast: PodcastDetails) {
 
   const backBtn = document.createElement("button");
   backBtn.classList.add("podcast-details__btn-back");
-  backBtn.textContent = "Back to list";
+  backBtn.textContent = "Назад";
   backBtn.addEventListener("click", () => {
     loadDefaultPodcast();
   });
@@ -317,7 +347,10 @@ function renderPodcastPage(podcast: PodcastDetails) {
   episodesContainer.appendChild(episodesTitle);
 
   podcast.episodes.forEach((episode) => {
-    const episodeRow = createEpisode(episode);
+    const episodeRow = createEpisode(
+      episode,
+      podcast.publisher,
+    );
     episodesContainer.appendChild(episodeRow);
   });
 
@@ -328,11 +361,19 @@ function renderPodcastPage(podcast: PodcastDetails) {
   contentPodcasts.appendChild(pageWrapper);
 }
 
-function createEpisode(episode: Episode): HTMLElement {
+function createEpisode(
+  episode: Episode,
+  publisherName: string = "Неизвестный автор",
+): HTMLElement {
   const row = document.createElement("div");
   row.classList.add("episode-row");
   row.setAttribute("data-audio-url", episode.audio);
   row.setAttribute("data-episode-id", episode.id);
+  row.setAttribute("data-title", episode.title ?? "Без названия");
+  row.setAttribute("data-duration", episode.audio_length_sec.toString());
+  row.setAttribute("data-pub-date", episode.pub_date_ms.toString());
+  row.setAttribute("data-image", episode.image || "");
+  row.setAttribute("data-publisher", publisherName);
 
   const playBtn = document.createElement("button");
   playBtn.classList.add("episode-row__play-btn");
@@ -376,55 +417,37 @@ function createEpisode(episode: Episode): HTMLElement {
 async function renderSavedPage(): Promise<void> {
   if (!contentPodcasts) return;
 
-  // if (searchTitle) searchTitle.style.display = "none";
   toggleLoader(true);
 
-  const savedIds = getFavoritesList();
+  removeContent(contentPodcasts);
 
-  if (savedIds.length === 0) {
-    toggleLoader(false);
-    contentPodcasts.textContent = "";
+  const savedEpisodes = getFavoritesList();
 
+  if (savedEpisodes.length === 0) {
     const emptyMsg = document.createElement("p");
     emptyMsg.classList.add("podcasts__empty");
-    emptyMsg.textContent = "У вас пока нет сохраненных подкастов.";
-
+    emptyMsg.textContent = "У вас пока нет сохраненных эпизодов в плейлисте.";
     contentPodcasts.appendChild(emptyMsg);
     return;
   }
 
-  try {
-    const requests = savedIds.map((id) =>
-      fetchFromListenNotes({
-        endpoint: `podcasts/${id}`,
-        params: { next_episode_pub_date: "0" },
-      }),
+  const playlistWrapper = document.createElement("div");
+  playlistWrapper.classList.add(
+    "saved-playlist-marker",
+    "podcast-details__episodes",
+  );
+
+  const fragment = document.createDocumentFragment();
+  savedEpisodes.forEach((episode) => {
+    const episodeRow = createEpisode(
+      episode,
+      episode.publisher,
     );
+    fragment.appendChild(episodeRow);
+  });
 
-    const podcastsData = await Promise.all(requests);
-    toggleLoader(false);
-    contentPodcasts.textContent = "";
-
-    const library = document.createElement("div");
-    library.classList.add("content__podcasts");
-
-    const fragment = document.createDocumentFragment();
-    podcastsData.forEach((data) => {
-      if (data) {
-        const cardElement = createPodcastCard(data);
-        fragment.appendChild(cardElement);
-      }
-    });
-  } catch (error) {
-    console.error("Ошибка загрузки:", error);
-    toggleLoader(false);
-    contentPodcasts.textContent = "";
-
-    const errorMsg = document.createElement("p");
-    errorMsg.classList.add("podcasts-error");
-    errorMsg.textContent = "Не удалось загрузить вашу библиотеку.";
-    contentPodcasts.appendChild(errorMsg);
-  }
+  playlistWrapper.appendChild(fragment);
+  contentPodcasts.appendChild(playlistWrapper);
 }
 
 function highlightActiveTab(activeButton: HTMLButtonElement): void {
@@ -438,13 +461,21 @@ function highlightActiveTab(activeButton: HTMLButtonElement): void {
 }
 
 function formatDate(ms: number): string {
+  if (isNaN(ms) || !isFinite(ms) || ms <= 0) {
+    return "Дата неизвестна";
+  }
+
   const options: Intl.DateTimeFormatOptions = {
     day: "numeric",
     month: "long",
     year: "numeric",
   };
 
-  return new Intl.DateTimeFormat("ru-RU", options).format(new Date(ms));
+  try {
+    return new Intl.DateTimeFormat("ru-RU", options).format(new Date(ms));
+  } catch (error) {
+    return "Дата неизвестна";
+  }
 }
 
 if (searchInput) {
